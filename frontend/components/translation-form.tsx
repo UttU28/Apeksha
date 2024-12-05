@@ -12,16 +12,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ItemText } from "@radix-ui/react-select";
 
+// Updated languages with key-value pairs
 const languages = [
-  { value: "hindi", label: "Hindi" },
-  { value: "marathi", label: "Marathi" },
-  { value: "gujarati", label: "Gujarati" },
-  { value: "telugu", label: "Telugu" },
-  { value: "bengali", label: "Bengali" },
-  { value: "tamil", label: "Tamil" },
-  { value: "kannada", label: "Kannada" },
-  { value: "punjabi", label: "Punjabi" },
+  { value: "hi", label: "Hindi" },
+  { value: "gom", label: "Gom" },
+  { value: "kn", label: "Kannada" },
+  { value: "doi", label: "Dogri" },
+  { value: "brx", label: "Bodo" },
+  { value: "ur", label: "Urdu" },
+  { value: "ta", label: "Tamil" },
+  { value: "ks", label: "Kashmiri" },
+  { value: "as", label: "Assamese" },
+  { value: "bn", label: "Bengali" },
+  { value: "mr", label: "Marathi" },
+  { value: "sd", label: "Sindhi" },
+  { value: "mai", label: "Maithili" },
+  { value: "pa", label: "Punjabi" },
+  { value: "ml", label: "Malayalam" },
+  { value: "mni", label: "Manipuri" },
+  { value: "te", label: "Telugu" },
+  { value: "sa", label: "Sanskrit" },
+  { value: "ne", label: "Nepali" },
+  { value: "sat", label: "Santali" },
+  { value: "gu", label: "Gujarati" },
+  { value: "or", label: "Odia" },
+  { value: "en", label: "English" }, // English is included in the list for target selection
 ];
 
 interface Translation {
@@ -35,30 +52,65 @@ export default function TranslationForm() {
   const [inputText, setInputText] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("");
   const [translations, setTranslations] = useState<Translation[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Input text:", inputText);
-    console.log("Selected language:", selectedLanguage);
-    
-    const newTranslation: Translation = {
-      id: Date.now().toString(),
-      inputText,
-      selectedLanguage,
-      translation: "कॉल करने के लिए यहां भैसिनी एपीआई को कॉल करें। तुम मूर्ख।"
-    };
-    
-    setTranslations(prev => [...prev, newTranslation]);
+    setLoading(true);
+    setErrorMessage(null);
+
+    // The source language is fixed as "en" (English)
+    const sourceLanguage = "en"; 
+
+    try {
+      const response = await fetch("http://192.168.1.131:5000/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sourceLanguage: sourceLanguage,
+          content: inputText,
+          targetLanguage: selectedLanguage, // Target language selected by user
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.status_code === 200) {
+        const newTranslation: Translation = {
+          id: Date.now().toString(),
+          inputText,
+          selectedLanguage,
+          translation: result.translated_content,
+        };
+
+        setTranslations((prev) => [...prev, newTranslation]);
+      } else {
+        setErrorMessage(result.message || "Translation failed.");
+      }
+    } catch (error) {
+      console.error("Error during translation:", error);
+      setErrorMessage("An error occurred while processing the request.");
+    } finally {
+      setLoading(false);
+    }
+
     setInputText("");
     setSelectedLanguage("");
   };
+
 
   const handleClearAll = () => {
     setTranslations([]);
   };
 
   const handleDelete = (id: string) => {
-    setTranslations(prev => prev.filter(t => t.id !== id));
+    setTranslations((prev) => prev.filter((t) => t.id !== id));
   };
 
   return (
@@ -79,7 +131,7 @@ export default function TranslationForm() {
               required
             >
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select language" />
+                <SelectValue placeholder="Select target language" />
               </SelectTrigger>
               <SelectContent>
                 {languages.map((lang) => (
@@ -89,12 +141,18 @@ export default function TranslationForm() {
                 ))}
               </SelectContent>
             </Select>
-            <Button type="submit" className="flex-1">
-              Translate
+            <Button type="submit" className="flex-1" disabled={loading}>
+              {loading ? "Translating..." : "Translate"}
             </Button>
           </div>
         </form>
       </Card>
+
+      {errorMessage && (
+        <div className="mt-4 p-4 border rounded bg-red-50 text-red-600">
+          <p>{errorMessage}</p>
+        </div>
+      )}
 
       {translations.length > 0 && (
         <div className="space-y-4">
@@ -103,7 +161,7 @@ export default function TranslationForm() {
               Clear All
             </Button>
           </div>
-          
+
           <div className="space-y-4">
             {translations.map((item) => (
               <Card key={item.id} className="p-6 space-y-4">
@@ -114,9 +172,7 @@ export default function TranslationForm() {
                       <p className="text-sm">{item.inputText}</p>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Translation ({
-                        languages.find(l => l.value === item.selectedLanguage)?.label
-                      }):</p>
+                      <p className="text-sm text-muted-foreground">Translation ({languages.find(l => l.value === item.selectedLanguage)?.label}):</p>
                       <p className="text-lg font-medium">{item.translation}</p>
                     </div>
                   </div>
