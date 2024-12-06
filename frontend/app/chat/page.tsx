@@ -11,56 +11,42 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, Mic, MessageSquare } from "lucide-react";
+import axios from "axios";
 
-const exampleResponse = `\`\`\`python
-# Function to add two numbers
-def add_numbers(a, b):
-    """
-    This function takes two arguments a and b,
-    and returns their sum.
-    """
-    return a + b
-
-# Example usage
-number1 = 5
-number2 = 7
-result = add_numbers(number1, number2)
-print(f"The sum of {number1} and {number2} is {result}")
-\`\`\`
-
-### Explanation:
-1. **Defining the Function**:
-   - The function \`add_numbers\` is defined with two parameters, \`a\` and \`b\`.
-   - The \`return\` statement calculates the sum of \`a\` and \`b\` and sends it back to the caller.
-
-2. **Using the Function**:
-   - \`number1\` and \`number2\` are assigned values \`5\` and \`7\` respectively.
-   - The function is called with \`number1\` and \`number2\` as arguments: \`add_numbers(number1, number2)\`.
-   - The result of the function is stored in the variable \`result\`.
-
-3. **Output**:
-   - The program uses \`print()\` to display the result, showing the addition operation and its result.`;
+const API_BASE_URL = "http://192.168.0.132:5000";
 
 export default function ChatPage() {
   const [audioData, setAudioData] = useState<{ blob: Blob; duration: number } | null>(null);
   const [imageData, setImageData] = useState<{ file: File; preview: string } | null>(null);
   const [text, setText] = useState("");
   const [response, setResponse] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    if (imageData) {
-      console.log("Image uploaded:", {
-        filename: imageData.file.name,
-        size: `${(imageData.file.size / 1024).toFixed(2)} KB`
-      });
+  const handleSubmit = async () => {
+    setLoading(true);
+    setResponse(null); // Clear the previous response
+    try {
+      if (text) {
+        // Send request to /getResponse endpoint
+        const res = await axios.post(`${API_BASE_URL}/getResponse`, { text });
+        setResponse(res.data.response);
+      } else if (audioData) {
+        // Send request to /transcribe endpoint
+        const formData = new FormData();
+        formData.append("audio", audioData.blob, "recording.wav");
+        const res = await axios.post(`${API_BASE_URL}/transcribe`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        setResponse(res.data.transcription);
+      } else {
+        alert("Please provide either text or audio input.");
+      }
+    } catch (error) {
+      console.error("Error processing request:", error);
+      setResponse("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    if (audioData) {
-      console.log("Audio duration:", audioData.duration, "seconds");
-    }
-    if (text) {
-      console.log("Text input:", text);
-    }
-    setResponse(exampleResponse);
   };
 
   const handleClear = () => {
@@ -108,10 +94,12 @@ export default function ChatPage() {
           </Tabs>
 
           <div className="flex justify-end gap-4">
-            <Button variant="outline" onClick={handleClear}>
+            <Button variant="outline" onClick={handleClear} disabled={loading}>
               Clear
             </Button>
-            <Button onClick={handleSubmit}>Submit</Button>
+            <Button onClick={handleSubmit} disabled={loading}>
+              {loading ? "Processing..." : "Submit"}
+            </Button>
           </div>
 
           {response && (

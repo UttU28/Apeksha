@@ -3,9 +3,8 @@
 import { ThemeProvider } from "next-themes";
 import { Card } from "@/components/ui/card";
 import ThemeToggle from "@/components/theme-toggle";
-import { MessageSquare, Radio, Car, Globe, Languages } from "lucide-react";
 import Link from "next/link";
-
+import { MessageSquare, Radio, Car, Globe, Languages, ListTodo } from "lucide-react";
 export default function Home() {
   const menuItems = [
     {
@@ -37,6 +36,12 @@ export default function Home() {
       icon: <Languages className="h-12 w-12" />,
       href: "/bhasini",
       description: "Language translation",
+    },
+    {
+      title: "To-Do",
+      icon: <ListTodo className="h-12 w-12" />,
+      href: "/todo",
+      description: "Manage your Shopping Lists",
     },
   ];
 

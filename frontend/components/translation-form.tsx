@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2 } from "lucide-react";
+import { Trash2, Play, Pause } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -12,9 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ItemText } from "@radix-ui/react-select";
 
-// Updated languages with key-value pairs
 const languages = [
   { value: "hi", label: "Hindi" },
   { value: "gom", label: "Gom" },
@@ -38,7 +36,7 @@ const languages = [
   { value: "sat", label: "Santali" },
   { value: "gu", label: "Gujarati" },
   { value: "or", label: "Odia" },
-  { value: "en", label: "English" }, // English is included in the list for target selection
+  { value: "en", label: "English" },
 ];
 
 interface Translation {
@@ -46,6 +44,7 @@ interface Translation {
   inputText: string;
   selectedLanguage: string;
   translation: string;
+  audioContent?: string;
 }
 
 export default function TranslationForm() {
@@ -54,17 +53,17 @@ export default function TranslationForm() {
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage(null);
 
-    // The source language is fixed as "en" (English)
-    const sourceLanguage = "en"; 
+    const sourceLanguage = "en";
 
     try {
-      const response = await fetch("http://192.168.1.131:5000/translate", {
+      const response = await fetch("http://192.168.0.132:5000/translate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -72,7 +71,7 @@ export default function TranslationForm() {
         body: JSON.stringify({
           sourceLanguage: sourceLanguage,
           content: inputText,
-          targetLanguage: selectedLanguage, // Target language selected by user
+          targetLanguage: selectedLanguage,
         }),
       });
 
@@ -87,6 +86,7 @@ export default function TranslationForm() {
           inputText,
           selectedLanguage,
           translation: result.translated_content,
+          audioContent: result.audioContent,
         };
 
         setTranslations((prev) => [...prev, newTranslation]);
@@ -104,13 +104,36 @@ export default function TranslationForm() {
     setSelectedLanguage("");
   };
 
-
   const handleClearAll = () => {
     setTranslations([]);
+    setCurrentlyPlaying(null);
   };
 
   const handleDelete = (id: string) => {
     setTranslations((prev) => prev.filter((t) => t.id !== id));
+    if (currentlyPlaying === id) {
+      setCurrentlyPlaying(null);
+    }
+  };
+
+  const handlePlayAudio = (translation: Translation) => {
+    if (!translation.audioContent) return;
+
+    if (currentlyPlaying === translation.id) {
+      // Stop playing
+      setCurrentlyPlaying(null);
+    } else {
+      // Stop any currently playing audio
+      if (currentlyPlaying) {
+        setCurrentlyPlaying(null);
+      }
+
+      // Start playing new audio
+      const audio = new Audio(`data:audio/wav;base64,${translation.audioContent}`);
+      audio.onended = () => setCurrentlyPlaying(null);
+      audio.play();
+      setCurrentlyPlaying(translation.id);
+    }
   };
 
   return (
@@ -172,8 +195,26 @@ export default function TranslationForm() {
                       <p className="text-sm">{item.inputText}</p>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Translation ({languages.find(l => l.value === item.selectedLanguage)?.label}):</p>
-                      <p className="text-lg font-medium">{item.translation}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Translation ({languages.find(l => l.value === item.selectedLanguage)?.label}):
+                      </p>
+                      <div className="flex items-center gap-4">
+                        <p className="text-lg font-medium">{item.translation}</p>
+                        {item.audioContent && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePlayAudio(item)}
+                            className="flex-shrink-0"
+                          >
+                            {currentlyPlaying === item.id ? (
+                              <Pause className="h-4 w-4" />
+                            ) : (
+                              <Play className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <Button
