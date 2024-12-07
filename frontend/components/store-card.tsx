@@ -1,3 +1,4 @@
+// components/store-card.tsx
 "use client";
 
 import { useState } from "react";
@@ -5,13 +6,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, MoveRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import type { StoreItem, Store } from "./store-list";
 
@@ -22,8 +22,9 @@ interface StoreCardProps {
   onUpdateItem: (storeId: string, itemId: string, newText: string) => void;
   onToggleItem: (storeId: string, itemId: string) => void;
   onToggleCollapse: (storeId: string) => void;
-  onDeleteRequest: (storeId: string, itemId?: string) => void;
+  onDeleteItem: (storeId: string, itemId: string) => void; // Updated prop
   onMoveItem: (fromStoreId: string, toStoreId: string, itemId: string) => void;
+  onDeleteStoreRequest: (storeId: string) => void; // Updated prop for store deletion
 }
 
 export default function StoreCard({
@@ -33,8 +34,9 @@ export default function StoreCard({
   onUpdateItem,
   onToggleItem,
   onToggleCollapse,
-  onDeleteRequest,
+  onDeleteItem,
   onMoveItem,
+  onDeleteStoreRequest,
 }: StoreCardProps) {
   const [newItem, setNewItem] = useState("");
   const [editingItem, setEditingItem] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export default function StoreCard({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onDeleteRequest(store.id)}
+            onClick={() => onDeleteStoreRequest(store.id)} // Delete store with confirmation
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -102,7 +104,7 @@ export default function StoreCard({
             </form>
 
             <div className="space-y-2">
-              {store.items.map(item => (
+              {store.items.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center gap-4 p-2 rounded-lg hover:bg-muted/50"
@@ -112,19 +114,25 @@ export default function StoreCard({
                     onCheckedChange={() => onToggleItem(store.id, item.id)}
                   />
                   <div className="flex-1">
-                    <p className={item.completed ? "text-muted-foreground line-through" : ""}>
+                    <p
+                      className={
+                        item.completed
+                          ? "text-muted-foreground line-through"
+                          : ""
+                      }
+                    >
                       {item.text}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Select onValueChange={(value) => handleMoveItem(item.id, value)}>
-                      <SelectTrigger className="w-[130px]">
-                        <SelectValue placeholder="Move to..." />
-                      </SelectTrigger>
+                    <Select
+                      onValueChange={(value) => handleMoveItem(item.id, value)}
+                    >
+                      <SelectTrigger className="w-[40px]"></SelectTrigger>
                       <SelectContent>
                         {allStores
-                          .filter(s => s.id !== store.id)
-                          .map(s => (
+                          .filter((s) => s.id !== store.id)
+                          .map((s) => (
                             <SelectItem key={s.id} value={s.id}>
                               {s.name}
                             </SelectItem>
@@ -141,7 +149,7 @@ export default function StoreCard({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => onDeleteRequest(store.id, item.id)}
+                      onClick={() => onDeleteItem(store.id, item.id)} // Immediate deletion
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
