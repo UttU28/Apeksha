@@ -1,140 +1,172 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Play, Pause } from "lucide-react";
+import { useState } from 'react'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Trash2, Play, Pause } from 'lucide-react'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 
 const languages = [
-  { value: "hi", label: "Hindi" },
-  { value: "gom", label: "Gom" },
-  { value: "kn", label: "Kannada" },
-  { value: "doi", label: "Dogri" },
-  { value: "brx", label: "Bodo" },
-  { value: "ur", label: "Urdu" },
-  { value: "ta", label: "Tamil" },
-  { value: "ks", label: "Kashmiri" },
-  { value: "as", label: "Assamese" },
-  { value: "bn", label: "Bengali" },
-  { value: "mr", label: "Marathi" },
-  { value: "sd", label: "Sindhi" },
-  { value: "mai", label: "Maithili" },
-  { value: "pa", label: "Punjabi" },
-  { value: "ml", label: "Malayalam" },
-  { value: "mni", label: "Manipuri" },
-  { value: "te", label: "Telugu" },
-  { value: "sa", label: "Sanskrit" },
-  { value: "ne", label: "Nepali" },
-  { value: "sat", label: "Santali" },
-  { value: "gu", label: "Gujarati" },
-  { value: "or", label: "Odia" },
-  { value: "en", label: "English" },
-];
+  { value: 'te', label: 'Telugu' },
+  { value: 'sa', label: 'Sanskrit' },
+  { value: 'gu', label: 'Gujarati' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'gom', label: 'Gom' },
+  { value: 'kn', label: 'Kannada' },
+  { value: 'doi', label: 'Dogri' },
+  { value: 'brx', label: 'Bodo' },
+  { value: 'ur', label: 'Urdu' },
+  { value: 'ta', label: 'Tamil' },
+  { value: 'ks', label: 'Kashmiri' },
+  { value: 'as', label: 'Assamese' },
+  { value: 'bn', label: 'Bengali' },
+  { value: 'mr', label: 'Marathi' },
+  { value: 'sd', label: 'Sindhi' },
+  { value: 'mai', label: 'Maithili' },
+  { value: 'pa', label: 'Punjabi' },
+  { value: 'ml', label: 'Malayalam' },
+  { value: 'mni', label: 'Manipuri' },
+  { value: 'ne', label: 'Nepali' },
+  { value: 'sat', label: 'Santali' },
+  { value: 'or', label: 'Odia' },
+  { value: 'en', label: 'English' },
+]
+
+const translatePrompt = `You are a pronunciation translator. Your primary role is to convert words or sentences provided in various languages (like Telugu, Gujarati, or others) into their English phonetic pronunciation. You are not required to translate the meaning of the words; instead, focus on how they are pronounced in English. Ensure that your output reflects the correct tone and pitch for natural pronunciation. Respond only with the English phonetic transcription, and nothing else.`
 
 interface Translation {
-  id: string;
-  inputText: string;
-  selectedLanguage: string;
-  translation: string;
-  audioContent?: string;
+  id: string
+  inputText: string
+  selectedLanguage: string
+  translation: string
+  audioContent?: string
+  response?: string
 }
 
 export default function TranslationForm() {
-  const [inputText, setInputText] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState("");
-  const [translations, setTranslations] = useState<Translation[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
+  const [inputText, setInputText] = useState('')
+  const [selectedLanguage, setSelectedLanguage] = useState('')
+  const [translations, setTranslations] = useState<Translation[]>([])
+  const [loading, setLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMessage(null);
+    e.preventDefault()
+    setLoading(true)
+    setErrorMessage(null)
 
-    const sourceLanguage = "en";
+    const sourceLanguage = 'en'
 
     try {
-      const response = await fetch("http://192.168.0.132:5000/translate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const translateResponse = await fetch(
+        'http://192.168.0.132:5000/translate',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sourceLanguage: sourceLanguage,
+            content: inputText,
+            targetLanguage: selectedLanguage,
+          }),
         },
-        body: JSON.stringify({
-          sourceLanguage: sourceLanguage,
-          content: inputText,
-          targetLanguage: selectedLanguage,
-        }),
-      });
+      )
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!translateResponse.ok) {
+        throw new Error(`HTTP error! status: ${translateResponse.status}`)
       }
 
-      const result = await response.json();
-      if (result.status_code === 200) {
+      const translationResult = await translateResponse.json()
+      if (translationResult.status_code === 200) {
+        const translatedText = translationResult.translated_content
         const newTranslation: Translation = {
           id: Date.now().toString(),
           inputText,
           selectedLanguage,
-          translation: result.translated_content,
-          audioContent: result.audioContent,
-        };
+          translation: translatedText,
+          audioContent: translationResult.audioContent,
+        }
 
-        setTranslations((prev) => [...prev, newTranslation]);
+        setTranslations((prev) => [...prev, newTranslation])
+
+        const responseText = `${translatePrompt}: \n\n ${translatedText}`
+        const getResponse = await fetch(
+          'http://192.168.0.132:5000/getResponse',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: responseText }),
+          },
+        )
+
+        if (!getResponse.ok) {
+          throw new Error(`HTTP error! status: ${getResponse.status}`)
+        }
+
+        const responseResult = await getResponse.json()
+
+        setTranslations((prev) =>
+          prev.map((t) =>
+            t.id === newTranslation.id
+              ? { ...t, response: responseResult.response }
+              : t,
+          ),
+        )
       } else {
-        setErrorMessage(result.message || "Translation failed.");
+        setErrorMessage(translationResult.message || 'Translation failed.')
       }
     } catch (error) {
-      console.error("Error during translation:", error);
-      setErrorMessage("An error occurred while processing the request.");
+      console.error('Error during translation or follow-up request:', error)
+      setErrorMessage('An error occurred while processing the request.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
 
-    setInputText("");
-    setSelectedLanguage("");
-  };
+    setInputText('')
+    setSelectedLanguage('')
+  }
 
   const handleClearAll = () => {
-    setTranslations([]);
-    setCurrentlyPlaying(null);
-  };
+    setTranslations([])
+    setCurrentlyPlaying(null)
+  }
 
   const handleDelete = (id: string) => {
-    setTranslations((prev) => prev.filter((t) => t.id !== id));
+    setTranslations((prev) => prev.filter((t) => t.id !== id))
     if (currentlyPlaying === id) {
-      setCurrentlyPlaying(null);
+      setCurrentlyPlaying(null)
     }
-  };
+  }
 
   const handlePlayAudio = (translation: Translation) => {
-    if (!translation.audioContent) return;
+    if (!translation.audioContent) return
 
     if (currentlyPlaying === translation.id) {
-      // Stop playing
-      setCurrentlyPlaying(null);
+      setCurrentlyPlaying(null)
     } else {
-      // Stop any currently playing audio
       if (currentlyPlaying) {
-        setCurrentlyPlaying(null);
+        setCurrentlyPlaying(null)
       }
 
-      // Start playing new audio
-      const audio = new Audio(`data:audio/wav;base64,${translation.audioContent}`);
-      audio.onended = () => setCurrentlyPlaying(null);
-      audio.play();
-      setCurrentlyPlaying(translation.id);
+      const audio = new Audio(
+        `data:audio/wav;base64,${translation.audioContent}`,
+      )
+      audio.onended = () => setCurrentlyPlaying(null)
+      audio.play()
+      setCurrentlyPlaying(translation.id)
     }
-  };
+  }
 
   return (
     <div className="space-y-4">
@@ -165,7 +197,7 @@ export default function TranslationForm() {
               </SelectContent>
             </Select>
             <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? "Translating..." : "Translate"}
+              {loading ? 'Translating...' : 'Translate'}
             </Button>
           </div>
         </form>
@@ -191,15 +223,25 @@ export default function TranslationForm() {
                 <div className="flex justify-between items-start">
                   <div className="space-y-4 flex-1">
                     <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Original Text:</p>
+                      <p className="text-sm text-muted-foreground">
+                        Original Text:
+                      </p>
                       <p className="text-sm">{item.inputText}</p>
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">
-                        Translation ({languages.find(l => l.value === item.selectedLanguage)?.label}):
+                        Translation (
+                        {
+                          languages.find(
+                            (l) => l.value === item.selectedLanguage,
+                          )?.label
+                        }
+                        ):
                       </p>
                       <div className="flex items-center gap-4">
-                        <p className="text-lg font-medium">{item.translation}</p>
+                        <p className="text-lg font-medium">
+                          {item.translation}
+                        </p>
                         {item.audioContent && (
                           <Button
                             variant="ghost"
@@ -215,6 +257,9 @@ export default function TranslationForm() {
                           </Button>
                         )}
                       </div>
+                        {item.response && (
+                          <p className="text-sm">{item.response}</p>
+                        )}
                     </div>
                   </div>
                   <Button
@@ -231,5 +276,5 @@ export default function TranslationForm() {
         </div>
       )}
     </div>
-  );
+  )
 }

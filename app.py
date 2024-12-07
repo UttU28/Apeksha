@@ -147,7 +147,8 @@ def respond():
             response_content = ai_response.get('message', 'No response message')
         else:
             response_content = str(ai_response)
-            response_content = response_content.removeprefix("role='assistant' content='").removesuffix("' images=None tool_calls=None").strip()
+            response_content = response_content.removeprefix("role='assistant' content=").removesuffix(" images=None tool_calls=None").strip()
+            response_content = response_content[1:-1]
         return jsonify({"response": response_content}), 200
     except Exception as e:
         return jsonify({"error": f"Error generating response: {str(e)}"}), 500
